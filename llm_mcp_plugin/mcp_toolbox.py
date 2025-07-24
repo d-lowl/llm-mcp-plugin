@@ -11,6 +11,33 @@ from mcp import types
 from .config import MCPServerConfig
 from .mcp_client import MCPClient
 
+# Try to import UI functions from bespoken, but don't fail if not available
+try:
+    from bespoken.ui import confirm_tool_action, tool_status, tool_error, tool_debug
+    UI_AVAILABLE = True
+except ImportError:
+    # Fallback functions if bespoken UI is not available
+    def confirm_tool_action(tool_name: str, action_description: str, details: dict = None, default: bool = True) -> bool:
+        print(f"Tool: {tool_name}")
+        print(f"Action: {action_description}")
+        if details:
+            for key, value in details.items():
+                if value:
+                    print(f"{key}: {value}")
+        return True  # Auto-confirm if UI not available
+    
+    def tool_status(message: str, indent: int = 2) -> None:
+        print(f"  {message}")
+    
+    def tool_error(message: str, indent: int = 2) -> None:
+        print(f"  ERROR: {message}")
+    
+    def tool_debug(message: str, indent: int = 2) -> None:
+        print(f"  DEBUG: {message}")
+    
+    UI_AVAILABLE = False
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,6 +101,31 @@ class MCPToolbox(llm.Toolbox):
                 async def tool_method(**kwargs) -> str:
                     """Dynamically generated tool method."""
                     try:
+                        # Show tool status
+                        tool_status(f"Preparing to call MCP tool: {tool_obj.name}")
+                        
+                        # Build action description and details for confirmation
+                        action_description = f"Call {tool_obj.name} MCP tool"
+                        details = {}
+                        
+                        if kwargs:
+                            details["Parameters"] = ", ".join([f"{k}={repr(v)}" for k, v in kwargs.items()])
+                        
+                        if tool_obj.description:
+                            details["Description"] = tool_obj.description
+                        
+                        # Ask for confirmation
+                        if not confirm_tool_action(
+                            tool_name=f"MCP_{self.config.name}_{tool_obj.name}",
+                            action_description=action_description,
+                            details=details,
+                            default=True
+                        ):
+                            tool_error("Tool call cancelled by user.")
+                            return "IMPORTANT: The user declined the tool call. Do not continue with the task. Wait for new instructions from the user. IMPORTANT: Do not continue with the task."
+                        
+                        # Execute the tool call
+                        tool_status(f"Executing MCP tool: {tool_obj.name}")
                         result = await self.client.call_tool(tool_obj.name, kwargs)
                         
                         # Format the result for LLM consumption
@@ -99,6 +151,7 @@ class MCPToolbox(llm.Toolbox):
                             
                     except Exception as e:
                         logger.error(f"Error calling tool {tool_obj.name}: {e}")
+                        tool_error(f"Error calling tool {tool_obj.name}: {e}")
                         return f"Error: {str(e)}"
                 
                 # Set method attributes
