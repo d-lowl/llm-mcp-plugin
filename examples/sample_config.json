@@ -1,0 +1,51 @@
+{
+  "servers": {
+    "toggl": {
+      "transport": "stdio",
+      "command": "node",
+      "args": ["/path/to/toggl-track-mcp/dist/index.js"],
+      "env": {
+        "TOGGL_API_TOKEN": "your_api_token_here"
+      },
+      "description": "Toggl Track time tracking integration",
+      "timeout": 30
+    },
+    "filesystem": {
+      "transport": "stdio", 
+      "command": "python",
+      "args": ["-m", "mcp.server.filesystem", "/path/to/allowed/directory"],
+      "description": "File system operations",
+      "timeout": 30
+    },
+    "git": {
+      "transport": "stdio",
+      "command": "python", 
+      "args": ["-m", "mcp.server.git", "/path/to/git/repo"],
+      "description": "Git repository management",
+      "timeout": 30
+    },
+    "weather-api": {
+      "transport": "http",
+      "url": "http://localhost:8000/mcp",
+      "headers": {
+        "Authorization": "Bearer your-weather-api-token",
+        "Content-Type": "application/json"
+      },
+      "description": "Weather API service",
+      "timeout": 30
+    },
+    "sqlite": {
+      "transport": "stdio",
+      "command": "python",
+      "args": ["-m", "mcp.server.sqlite", "/path/to/database.db"],
+      "description": "SQLite database operations",
+      "timeout": 30
+    },
+    "browser": {
+      "transport": "sse",
+      "url": "http://localhost:3000/sse",
+      "description": "Browser automation tools",
+      "timeout": 60
+    }
+  }
+} 
