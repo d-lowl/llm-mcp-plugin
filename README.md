@@ -15,7 +15,7 @@ A plugin for the [LLM](https://llm.datasette.io/) command-line tool that enables
 ## Installation
 
 ```bash
-uv add 
+uv add git+https://github.com/d-lowl/llm-mcp-plugin.git
 ```
 
 ## Quick Start
