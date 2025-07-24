@@ -61,7 +61,7 @@ export ANTHROPIC_API_KEY=your-anthropic-api-key
 ./notion_example.py
 ```
 
-![Notion example](notion_example.png)
+![Notion example](./images/notion_example.png)
 
 ## Supported MCP Servers
 
