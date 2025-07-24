@@ -23,7 +23,29 @@ uv add
 Usage in Bespoken:
 
 ```python
+mcp_toolbox = MCPToolbox(
+    config=MCPServerConfig(
+        name="notion",
+        transport="stdio",
+        command="npx",
+        args=["-y", "@notionhq/notion-mcp-server"],
+        env={
+            "OPENAPI_MCP_HEADERS": f'{{"Authorization": "Bearer {NOTION_API_KEY}", "Notion-Version": "2022-06-28" }}'
+        }
+    )
+)
 
+chat(
+    model_name="anthropic/claude-3-5-sonnet-20240620",
+    tools=[TodoTools(), mcp_toolbox],
+    system_prompt=SYSTEM_PROMPT,
+    debug=True,
+    slash_commands={
+        "/thinking": "Let me think through this step by step:",
+        "/role": set_role,
+        "/whoami": whoami,
+    },
+)
 ```
 
 (I haven't done any testing in bare llm yet, but it should work.)
