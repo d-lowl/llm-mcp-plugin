@@ -34,15 +34,8 @@ jobs:
     - name: Test STDERR handling functionality
       run: uv run python simple_stderr_test.py
 
-    - name: Lint code with black
-      run: uv run black --check llm_mcp_plugin/ tests/ *.py
-
-    - name: Check import sorting
-      run: uv run isort --check-only llm_mcp_plugin/ tests/ *.py
-
-    - name: Type checking
-      run: uv run mypy llm_mcp_plugin/
-      continue-on-error: true
+    - name: Run checks
+      run: uv run pre-commit run --all-files
 
   integration:
     runs-on: ubuntu-latest
