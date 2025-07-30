@@ -6,13 +6,12 @@ import os
 import subprocess
 import sys
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, List, Optional, Union, TextIO
+from typing import Any, AsyncGenerator, Dict, List, Optional, TextIO, Union
 
-from mcp import ClientSession, StdioServerParameters
+from mcp import ClientSession, StdioServerParameters, types
+from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
-from mcp.client.sse import sse_client  
 from mcp.client.streamable_http import streamablehttp_client
-from mcp import types
 
 from .config import MCPServerConfig
 
@@ -61,13 +60,15 @@ class MCPClient:
         """
         if self.config.stderr_mode == "disable":
             # Return devnull as a TextIO object
-            return open(os.devnull, 'w')
+            return open(os.devnull, "w")
         elif self.config.stderr_mode == "terminal":
             return sys.stderr  # Use default (inherit from parent)
         elif self.config.stderr_mode == "file":
             if not self.config.stderr_file:
-                logger.warning("stderr_mode is 'file' but no stderr_file specified, disabling STDERR")
-                return open(os.devnull, 'w')
+                logger.warning(
+                    "stderr_mode is 'file' but no stderr_file specified, disabling STDERR"
+                )
+                return open(os.devnull, "w")
             
             # Create directory if it doesn't exist
             stderr_path = os.path.expanduser(self.config.stderr_file)
@@ -79,10 +80,12 @@ class MCPClient:
                 return open(stderr_path, mode)
             except OSError as e:
                 logger.error(f"Failed to open stderr file {stderr_path}: {e}")
-                return open(os.devnull, 'w')
+                return open(os.devnull, "w")
         else:
-            logger.warning(f"Unknown stderr_mode: {self.config.stderr_mode}, disabling STDERR")
-            return open(os.devnull, 'w')
+            logger.warning(
+                f"Unknown stderr_mode: {self.config.stderr_mode}, disabling STDERR"
+            )
+            return open(os.devnull, "w")
     
     @asynccontextmanager
     async def _connect_stdio(self) -> AsyncGenerator[ClientSession, None]:

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Simple test to verify STDERR handling configuration works."""
 
+import os
 import sys
 import tempfile
-import os
 from pathlib import Path
 
 # Add the project to path

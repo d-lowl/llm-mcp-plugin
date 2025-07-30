@@ -22,6 +22,30 @@ A plugin for the [LLM](https://llm.datasette.io/) command-line tool that enables
 uv add git+https://github.com/d-lowl/llm-mcp-plugin.git
 ```
 
+## Development
+
+### Pre-commit Hooks
+
+This project uses pre-commit hooks to ensure code quality. To set up pre-commit:
+
+```bash
+# Install pre-commit
+pip install pre-commit
+
+# Install the git hook scripts
+pre-commit install
+
+# (Optional) Run against all files
+pre-commit run --all-files
+```
+
+The pre-commit configuration includes:
+- **Black** - Code formatting
+- **isort** - Import sorting  
+- **mypy** - Type checking
+- **flake8** - Linting
+- **bandit** - Security checks
+
 ## Quick Start
 
 Usage in Bespoken:

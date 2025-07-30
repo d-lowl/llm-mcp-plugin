@@ -3,7 +3,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Literal
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -32,16 +32,19 @@ class MCPServerConfig(BaseModel):
     
     # STDERR handling options
     stderr_mode: Literal["disable", "file", "terminal"] = Field(
-        "disable", 
-        description="How to handle STDERR: 'disable' (default), 'file' (redirect to file), 'terminal' (display in terminal)"
+        "disable",
+        description=(
+            "How to handle STDERR: 'disable' (default), 'file' (redirect to file), "
+            "'terminal' (display in terminal)"
+        ),
     )
     stderr_file: Optional[str] = Field(
-        None, 
-        description="File path to redirect STDERR to (only used when stderr_mode='file')"
+        None,
+        description="File path to redirect STDERR to (only used when stderr_mode='file')",
     )
     stderr_append: bool = Field(
-        False, 
-        description="Whether to append to stderr_file (True) or overwrite it (False)"
+        False,
+        description="Whether to append to stderr_file (True) or overwrite it (False)",
     )
     
     def validate_config(self) -> None:

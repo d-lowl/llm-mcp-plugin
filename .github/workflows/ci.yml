@@ -22,11 +22,8 @@ jobs:
     - name: Set up Python
       run: uv python install 3.11
 
-    - name: Install project dependencies
-      run: uv sync
-
-    - name: Install dev dependencies
-      run: uv add --dev pytest pytest-asyncio black isort mypy
+    - name: Install dependencies
+      run: uv sync --dev
 
     - name: Verify pytest installation
       run: uv run pytest --version
