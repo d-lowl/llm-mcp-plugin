@@ -1,46 +1,49 @@
+fail_fast: false
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v4.5.0
     hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
+      - id: check-toml
       - id: check-yaml
-      - id: check-added-large-files
+        args: ["--unsafe"] # only check syntax for yaml files
       - id: check-json
-      - id: check-merge-conflict
-      - id: debug-statements
+      - id: mixed-line-ending
+        files: "\\.(py|txt|yaml|json|md|toml|lock|cfg|html|sh|js|yml)$"
+      - id: trailing-whitespace
+        files: "\\.(py|txt|yaml|json|toml|lock|cfg|html|sh|js|yml)$"
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-case-conflict
+      - id: requirements-txt-fixer
 
   - repo: https://github.com/psf/black
-    rev: 24.4.2
+    rev: 24.2.0
     hooks:
       - id: black
-        language_version: python3.11
-        args: [--line-length=88]
+        args: [--config=pyproject.toml]
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    # Ruff version.
+    rev: "v0.2.1"
     hooks:
-      - id: isort
-        args: [--profile=black]
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix, "--config=pyproject.toml"] # enable autofix
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.1
+  - repo: local
     hooks:
       - id: mypy
-        additional_dependencies:
-          - pydantic>=2.0.0
-          - types-requests
-        args: [--ignore-missing-imports]
+        name: mypy
+        entry: mypy
+        language: system
+        types: [python]
+        args: ["--config-file=pyproject.toml"]
+        exclude: '.*__init__\.py|tests'
 
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
+  - repo: https://github.com/crate-ci/typos
+    rev: typos-v0.10.21
     hooks:
-      - id: bandit
-        args: [-r, -x, tests/]
-        exclude: ^tests/
-
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.1.1
-    hooks:
-      - id: flake8
-        args: [--max-line-length=88, --extend-ignore=E203,W503]
+      - id: typos
+        args: [--config=pyproject.toml]
+        pass_filenames: false

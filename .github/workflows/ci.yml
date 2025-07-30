@@ -47,7 +47,7 @@ jobs:
   integration:
     runs-on: ubuntu-latest
     needs: test
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4

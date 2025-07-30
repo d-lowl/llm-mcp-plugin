@@ -12,10 +12,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 from llm_mcp_plugin.config import MCPServerConfig
 
 
-def test_config_validation():
+def test_config_validation() -> bool:
     """Test that STDERR configuration validation works."""
     print("Testing configuration validation...")
-    
+
     # Test basic config works
     try:
         config = MCPServerConfig(
@@ -23,23 +23,33 @@ def test_config_validation():
             transport="stdio",
             command="python",
             args=["test.py"],
-            stderr_mode="disable"
+            stderr_mode="disable",
+            url=None,
+            timeout=30,
+            description=None,
+            stderr_file=None,
+            stderr_append=False,
         )
         config.validate_config()
         print("✓ Basic config validation works")
     except Exception as e:
         print(f"✗ Basic config failed: {e}")
         return False
-    
+
     # Test file mode without stderr_file fails
     try:
         config2 = MCPServerConfig(
-            name="test2", 
+            name="test2",
             transport="stdio",
             command="python",
             args=["test.py"],
-            stderr_mode="file"
+            stderr_mode="file",
             # Missing stderr_file
+            url=None,
+            timeout=30,
+            description=None,
+            stderr_file=None,
+            stderr_append=False,
         )
         config2.validate_config()
         print("✗ Should have failed validation - missing stderr_file")
@@ -49,45 +59,54 @@ def test_config_validation():
     except Exception as e:
         print(f"✗ Wrong exception type: {e}")
         return False
-    
+
     # Test valid file mode works
     try:
         config3 = MCPServerConfig(
             name="test3",
-            transport="stdio", 
+            transport="stdio",
             command="python",
             args=["test.py"],
             stderr_mode="file",
-            stderr_file="/tmp/test.log"
+            stderr_file="/tmp/test.log",
+            url=None,
+            timeout=30,
+            description=None,
+            stderr_append=False,
         )
         config3.validate_config()
         print("✓ Valid file config works")
     except Exception as e:
         print(f"✗ Valid config failed: {e}")
         return False
-    
+
     return True
 
 
-def test_stderr_file_handling():
+def test_stderr_file_handling() -> bool:
     """Test that STDERR file objects can be created."""
     print("\nTesting STDERR file handling...")
-    
+
     # Import here to avoid issues if other parts fail
     from llm_mcp_plugin.mcp_client import MCPClient
-    
+
     # Test disable mode
     config = MCPServerConfig(
         name="test-disable",
         transport="stdio",
-        command="echo", 
+        command="echo",
         args=["test"],
-        stderr_mode="disable"
+        stderr_mode="disable",
+        url=None,
+        timeout=30,
+        description=None,
+        stderr_file=None,
+        stderr_append=False,
     )
-    
+
     client = MCPClient(config)
     stderr_target = client._get_stderr_target()
-    
+
     try:
         # Should be able to write to it
         stderr_target.write("test\n")
@@ -99,33 +118,36 @@ def test_stderr_file_handling():
     finally:
         if stderr_target != sys.stderr:
             stderr_target.close()
-    
+
     # Test file mode
     with tempfile.NamedTemporaryFile(delete=False) as f:
         stderr_file = f.name
-    
+
     try:
         config2 = MCPServerConfig(
             name="test-file",
             transport="stdio",
             command="echo",
-            args=["test"], 
+            args=["test"],
             stderr_mode="file",
             stderr_file=stderr_file,
-            stderr_append=False
+            stderr_append=False,
+            url=None,
+            timeout=30,
+            description=None,
         )
-        
+
         client2 = MCPClient(config2)
         stderr_target2 = client2._get_stderr_target()
-        
+
         # Should be able to write to file
         stderr_target2.write("test stderr content\n")
         stderr_target2.flush()
         stderr_target2.close()
-        
+
         # Check file was written
         if os.path.exists(stderr_file):
-            with open(stderr_file, 'r') as f:
+            with open(stderr_file, "r") as f:
                 content = f.read()
             if "test stderr content" in content:
                 print("✓ File mode stderr target works")
@@ -135,46 +157,51 @@ def test_stderr_file_handling():
         else:
             print("✗ Stderr file was not created")
             return False
-            
+
     except Exception as e:
         print(f"✗ File mode failed: {e}")
         return False
     finally:
         if os.path.exists(stderr_file):
             os.unlink(stderr_file)
-    
+
     # Test terminal mode
     config3 = MCPServerConfig(
         name="test-terminal",
         transport="stdio",
         command="echo",
         args=["test"],
-        stderr_mode="terminal"
+        stderr_mode="terminal",
+        url=None,
+        timeout=30,
+        description=None,
+        stderr_file=None,
+        stderr_append=False,
     )
-    
+
     client3 = MCPClient(config3)
     stderr_target3 = client3._get_stderr_target()
-    
+
     if stderr_target3 == sys.stderr:
         print("✓ Terminal mode stderr target works")
     else:
         print("✗ Terminal mode should return sys.stderr")
         return False
-    
+
     return True
 
 
-def main():
+def main() -> int:
     """Run all tests."""
     print("=" * 50)
     print("MCP STDERR Handling Configuration Tests")
     print("=" * 50)
-    
+
     success = True
-    
+
     success &= test_config_validation()
     success &= test_stderr_file_handling()
-    
+
     print("\n" + "=" * 50)
     if success:
         print("✅ All tests passed!")

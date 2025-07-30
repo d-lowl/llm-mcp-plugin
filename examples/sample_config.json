@@ -11,7 +11,7 @@
       "timeout": 30
     },
     "filesystem": {
-      "transport": "stdio", 
+      "transport": "stdio",
       "command": "python",
       "args": ["-m", "mcp.server.filesystem", "/path/to/allowed/directory"],
       "description": "File system operations",
@@ -19,7 +19,7 @@
     },
     "git": {
       "transport": "stdio",
-      "command": "python", 
+      "command": "python",
       "args": ["-m", "mcp.server.git", "/path/to/git/repo"],
       "description": "Git repository management",
       "timeout": 30
@@ -48,4 +48,4 @@
       "timeout": 60
     }
   }
-} 
+}

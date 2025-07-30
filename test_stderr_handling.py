@@ -2,15 +2,11 @@
 """Test script to verify STDERR handling functionality for MCP servers."""
 
 import asyncio
-import json
 import os
 import tempfile
-import time
-from pathlib import Path
 
 from llm_mcp_plugin.config import MCPServerConfig
 from llm_mcp_plugin.mcp_client import MCPClient
-
 
 # Simple test server that writes to STDERR
 TEST_SERVER_SCRIPT = '''#!/usr/bin/env python3
@@ -34,15 +30,15 @@ if __name__ == "__main__":
 '''
 
 
-async def test_stderr_disable():
+async def test_stderr_disable() -> None:
     """Test STDERR disabled mode."""
     print("Testing STDERR disable mode...")
-    
+
     # Create temporary server script
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write(TEST_SERVER_SCRIPT)
         server_script = f.name
-    
+
     try:
         # Configure server with STDERR disabled
         config = MCPServerConfig(
@@ -50,40 +46,45 @@ async def test_stderr_disable():
             transport="stdio",
             command="python",
             args=[server_script],
-            stderr_mode="disable"
+            stderr_mode="disable",
+            url=None,
+            timeout=30,
+            description=None,
+            stderr_file=None,
+            stderr_append=False,
         )
-        
+
         client = MCPClient(config)
-        
+
         # Connect and call a tool
         async with client.connect() as session:
             tools_response = await session.list_tools()
             tools = tools_response.tools
             print(f"Found {len(tools)} tools")
-            
+
             # Call the test tool
             result = await session.call_tool("test_tool", {})
             print(f"Tool result: {result}")
-        
+
         print("✓ STDERR disable test completed - no stderr output should be visible")
-        
+
     finally:
         os.unlink(server_script)
 
 
-async def test_stderr_to_file():
+async def test_stderr_to_file() -> None:
     """Test STDERR to file mode."""
     print("\nTesting STDERR to file mode...")
-    
+
     # Create temporary server script
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write(TEST_SERVER_SCRIPT)
         server_script = f.name
-    
+
     # Create temporary stderr file
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
         stderr_file = f.name
-    
+
     try:
         # Configure server with STDERR to file
         config = MCPServerConfig(
@@ -93,46 +94,49 @@ async def test_stderr_to_file():
             args=[server_script],
             stderr_mode="file",
             stderr_file=stderr_file,
-            stderr_append=False
+            stderr_append=False,
+            url=None,
+            timeout=30,
+            description=None,
         )
-        
+
         client = MCPClient(config)
-        
+
         # Connect and call a tool
         async with client.connect() as session:
             tools_response = await session.list_tools()
             tools = tools_response.tools
             print(f"Found {len(tools)} tools")
-            
+
             # Call the test tool
             result = await session.call_tool("test_tool", {})
             print(f"Tool result: {result}")
-        
+
         # Check if stderr was written to file
         if os.path.exists(stderr_file):
-            with open(stderr_file, 'r') as f:
+            with open(stderr_file, "r") as f:
                 stderr_content = f.read()
-            print(f"✓ STDERR file test completed")
+            print("✓ STDERR file test completed")
             print(f"STDERR content written to {stderr_file}:")
             print(stderr_content)
         else:
             print("✗ STDERR file was not created")
-        
+
     finally:
         os.unlink(server_script)
         if os.path.exists(stderr_file):
             os.unlink(stderr_file)
 
 
-async def test_stderr_terminal():
+async def test_stderr_terminal() -> None:
     """Test STDERR to terminal mode."""
     print("\nTesting STDERR to terminal mode...")
-    
+
     # Create temporary server script
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write(TEST_SERVER_SCRIPT)
         server_script = f.name
-    
+
     try:
         # Configure server with STDERR to terminal
         config = MCPServerConfig(
@@ -140,33 +144,38 @@ async def test_stderr_terminal():
             transport="stdio",
             command="python",
             args=[server_script],
-            stderr_mode="terminal"
+            stderr_mode="terminal",
+            url=None,
+            timeout=30,
+            description=None,
+            stderr_file=None,
+            stderr_append=False,
         )
-        
+
         client = MCPClient(config)
-        
+
         print("You should see STDERR messages in the terminal below:")
-        
+
         # Connect and call a tool
         async with client.connect() as session:
             tools_response = await session.list_tools()
             tools = tools_response.tools
             print(f"Found {len(tools)} tools")
-            
+
             # Call the test tool
             result = await session.call_tool("test_tool", {})
             print(f"Tool result: {result}")
-        
+
         print("✓ STDERR terminal test completed - stderr should be visible above")
-        
+
     finally:
         os.unlink(server_script)
 
 
-async def test_config_validation():
+async def test_config_validation() -> None:
     """Test configuration validation."""
     print("\nTesting configuration validation...")
-    
+
     # Test invalid config - file mode without stderr_file
     try:
         config = MCPServerConfig(
@@ -174,14 +183,19 @@ async def test_config_validation():
             transport="stdio",
             command="python",
             args=["test.py"],
-            stderr_mode="file"
+            stderr_mode="file",
             # Missing stderr_file
+            url=None,
+            timeout=30,
+            description=None,
+            stderr_file=None,
+            stderr_append=False,
         )
         config.validate_config()
         print("✗ Configuration validation failed - should have raised error")
     except ValueError as e:
         print(f"✓ Configuration validation working: {e}")
-    
+
     # Test valid config
     try:
         config = MCPServerConfig(
@@ -190,7 +204,11 @@ async def test_config_validation():
             command="python",
             args=["test.py"],
             stderr_mode="file",
-            stderr_file="/tmp/test.log"
+            stderr_file="/tmp/test.log",
+            url=None,
+            timeout=30,
+            description=None,
+            stderr_append=False,
         )
         config.validate_config()
         print("✓ Valid configuration accepted")
@@ -198,17 +216,17 @@ async def test_config_validation():
         print(f"✗ Valid configuration rejected: {e}")
 
 
-async def main():
+async def main() -> None:
     """Run all tests."""
     print("=" * 50)
     print("MCP STDERR Handling Tests")
     print("=" * 50)
-    
+
     await test_config_validation()
     await test_stderr_disable()
     await test_stderr_to_file()
     await test_stderr_terminal()
-    
+
     print("\n" + "=" * 50)
     print("All tests completed!")
 

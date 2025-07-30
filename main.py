@@ -14,14 +14,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import llm
+
 from llm_mcp_plugin import MCPServerConfig
 from llm_mcp_plugin.plugin import get_config
 
 
-async def demo_filesystem_mcp():
+async def demo_filesystem_mcp() -> None:
     """Demonstrate using a filesystem MCP server."""
     print("🗂️  Setting up filesystem MCP server...")
-    
+
     # Configure a filesystem MCP server (you'll need the MCP server installed)
     fs_config = MCPServerConfig(
         name="filesystem",
@@ -29,65 +30,69 @@ async def demo_filesystem_mcp():
         command="python",
         args=["-m", "mcp.server.filesystem", str(Path.home())],
         description="File system operations",
-        timeout=30
+        timeout=30,
+        url=None,
+        stderr_mode="disable",
+        stderr_file=None,
+        stderr_append=False,
     )
-    
+
     # Add to configuration
     config = get_config()
     config.add_server(fs_config)
-    
+
     try:
         # Get the toolbox
-        fs_toolbox = llm.get_mcp_toolbox("filesystem")
-        
+        fs_toolbox = llm.get_mcp_toolbox("filesystem")  # type: ignore[attr-defined]
+
         # Initialize and show capabilities
         await fs_toolbox._ensure_initialized()
         capabilities = await fs_toolbox.list_capabilities()
-        
-        print(f"✅ Connected to filesystem MCP server!")
+
+        print("✅ Connected to filesystem MCP server!")
         print(f"   Tools: {len(capabilities['tools'])}")
         print(f"   Resources: {len(capabilities['resources'])}")
         print(f"   Available tools: {capabilities['tools']}")
-        
+
         # Demo with an LLM (if you have one configured)
         try:
             model = llm.get_model("gpt-4o-mini")
             conversation = model.conversation(tools=[fs_toolbox])
-            
+
             print("\n🤖 Testing with LLM...")
             response = conversation.chain("List the files in my home directory")
             print(f"Response: {response.text()}")
-            
+
         except Exception as e:
             print(f"⚠️  LLM demo skipped (no model configured): {e}")
-            
+
     except Exception as e:
         print(f"❌ Failed to set up filesystem MCP: {e}")
         print("   Make sure you have the MCP Python SDK installed:")
         print("   pip install mcp")
 
 
-async def list_configured_servers():
+async def list_configured_servers() -> None:
     """List all configured MCP servers."""
-    servers = llm.list_mcp_servers()
-    
+    servers = llm.list_mcp_servers()  # type: ignore[attr-defined]
+
     if not servers:
         print("📝 No MCP servers configured yet.")
         return
-    
+
     print(f"📋 Configured MCP servers ({len(servers)}):")
     config = get_config()
-    
+
     for name in servers:
         server_config = config.get_server(name)
         if server_config:
             print(f"   • {name}: {server_config.transport}")
             if server_config.description:
                 print(f"     {server_config.description}")
-            
+
             # Test connection
             try:
-                toolbox = llm.get_mcp_toolbox(name)
+                toolbox = llm.get_mcp_toolbox(name)  # type: ignore[attr-defined]
                 await toolbox._ensure_initialized()
                 capabilities = await toolbox.list_capabilities()
                 print(f"     ✅ Connected ({len(capabilities['tools'])} tools)")
@@ -95,12 +100,13 @@ async def list_configured_servers():
                 print(f"     ❌ Connection failed: {e}")
 
 
-def show_usage():
+def show_usage() -> None:
     """Show usage information."""
-    print("""
+    print(
+        """
 🔧 LLM MCP Plugin Demo
 
-This plugin allows you to use Model Context Protocol (MCP) servers 
+This plugin allows you to use Model Context Protocol (MCP) servers
 as toolboxes in LLM conversations.
 
 Commands:
@@ -120,12 +126,14 @@ CLI Usage (after installation):
   llm mcp list
   llm mcp test myserver
   llm mcp info myserver
-    """)
+    """
+    )
 
 
-def show_cli_examples():
+def show_cli_examples() -> None:
     """Show CLI usage examples."""
-    print("""
+    print(
+        """
 📚 LLM MCP Plugin CLI Examples
 
 # Add a Toggl Track MCP server
@@ -136,7 +144,7 @@ llm mcp add toggl \\
   --env TOGGL_API_TOKEN=your_token \\
   --description "Time tracking integration"
 
-# Add a filesystem MCP server  
+# Add a filesystem MCP server
 llm mcp add filesystem \\
   --transport stdio \\
   --command python \\
@@ -163,17 +171,18 @@ llm mcp info toggl
 
 # Remove a server
 llm mcp remove toggl
-    """)
+    """
+    )
 
 
-async def main():
+async def main() -> None:
     """Main entry point."""
     if len(sys.argv) < 2:
         show_usage()
         return
-    
+
     command = sys.argv[1].lower()
-    
+
     if command == "demo":
         await demo_filesystem_mcp()
     elif command == "list":

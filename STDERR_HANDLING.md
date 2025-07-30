@@ -74,7 +74,7 @@ This redirects all STDERR output to the specified file. The file will be created
   "servers": {
     "my-server": {
       "transport": "stdio",
-      "command": "python", 
+      "command": "python",
       "args": ["/path/to/server.py"],
       "stderr_mode": "terminal"
     }
