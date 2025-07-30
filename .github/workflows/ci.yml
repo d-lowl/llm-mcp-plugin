@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: uv sync
+
+    - name: Run unit tests
+      run: uv run pytest tests/ -v --tb=short
+
+    - name: Test STDERR handling functionality
+      run: uv run python simple_stderr_test.py
+
+    - name: Run checks
+      run: uv run pre-commit run --all-files
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python 3.11
+      run: uv python install 3.11
+
+    - name: Install dependencies
+      run: uv sync
+
+    - name: Test package installation
+      run: uv run python -c "from llm_mcp_plugin.config import MCPServerConfig; print('✓ Package imports work')"
+
+    - name: Validate example configurations
+      run: |
+        python -c "
+        import json
+        with open('examples/stderr_handling_example.json', 'r') as f:
+            config = json.load(f)
+        assert 'servers' in config
+        for name, server in config['servers'].items():
+            assert 'transport' in server
+            assert 'command' in server
+            assert 'stderr_mode' in server
+            print(f'✓ {name} config is valid')
+        print('All example configurations are valid JSON')
+        "

@@ -1,5 +1,7 @@
 # LLM MCP Plugin
 
+[![CI](https://github.com/d-lowl/llm-mcp-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/d-lowl/llm-mcp-plugin/actions/workflows/ci.yml)
+
 **IMPORTANT: This is a very early version of the MCP wrapper for [llm](https://llm.datasette.io/) and [Bespoken](https://bespoken.ai/), largely written by Claude and barely tested. Proceed with caution.**
 
 A plugin for the [LLM](https://llm.datasette.io/) command-line tool that enables using [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers as toolboxes in conversations.
@@ -7,16 +9,41 @@ A plugin for the [LLM](https://llm.datasette.io/) command-line tool that enables
 ## Features
 
 - **Dynamic MCP Server Integration**: Connect to any MCP server and expose its tools as LLM toolbox methods
-- **Multiple Transport Support**: Works with stdio, SSE, and HTTP-based MCP servers  
+- **Multiple Transport Support**: Works with stdio, SSE, and HTTP-based MCP servers
 - **Automatic Tool Discovery**: Automatically converts MCP tools into callable methods
 - **Resource & Prompt Access**: Expose MCP resources and prompts through the toolbox
 - **Configuration-Driven**: Easy setup for different MCP servers via configuration files
+- **STDERR Handling**: Control how MCP server error output is handled (disable, redirect to file, or display in terminal)
 
 ## Installation
 
 ```bash
 uv add git+https://github.com/d-lowl/llm-mcp-plugin.git
 ```
+
+## Development
+
+### Setup
+
+To set up the development environment:
+
+```bash
+# Install all dependencies (including linting tools and pre-commit)
+uv sync
+
+# Install pre-commit hooks for automatic code quality checks
+uv run pre-commit install
+
+# (Optional) Run pre-commit against all files
+uv run pre-commit run --all-files
+```
+
+The pre-commit configuration includes:
+- **Black** - Code formatting
+- **isort** - Import sorting
+- **mypy** - Type checking
+- **flake8** - Linting
+- **bandit** - Security checks
 
 ## Quick Start
 
