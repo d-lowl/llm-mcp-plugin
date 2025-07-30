@@ -1,0 +1,36 @@
+{
+  "servers": {
+    "example-server-disabled-stderr": {
+      "transport": "stdio",
+      "command": "python",
+      "args": ["/path/to/server.py"],
+      "stderr_mode": "disable",
+      "description": "Example server with STDERR disabled (default)"
+    },
+    "example-server-stderr-to-file": {
+      "transport": "stdio", 
+      "command": "python",
+      "args": ["/path/to/server.py"],
+      "stderr_mode": "file",
+      "stderr_file": "~/.logs/mcp_server_errors.log",
+      "stderr_append": true,
+      "description": "Example server with STDERR redirected to a log file"
+    },
+    "example-server-stderr-terminal": {
+      "transport": "stdio",
+      "command": "python", 
+      "args": ["/path/to/server.py"],
+      "stderr_mode": "terminal",
+      "description": "Example server with STDERR displayed in terminal"
+    },
+    "debug-server": {
+      "transport": "stdio",
+      "command": "python",
+      "args": ["/path/to/debug_server.py", "--debug"],
+      "stderr_mode": "file",
+      "stderr_file": "/tmp/mcp_debug.log",
+      "stderr_append": false,
+      "description": "Debug server with STDERR logged to temporary file (overwrite mode)"
+    }
+  }
+}

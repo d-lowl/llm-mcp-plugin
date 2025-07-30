@@ -11,6 +11,7 @@ A plugin for the [LLM](https://llm.datasette.io/) command-line tool that enables
 - **Automatic Tool Discovery**: Automatically converts MCP tools into callable methods
 - **Resource & Prompt Access**: Expose MCP resources and prompts through the toolbox
 - **Configuration-Driven**: Easy setup for different MCP servers via configuration files
+- **STDERR Handling**: Control how MCP server error output is handled (disable, redirect to file, or display in terminal)
 
 ## Installation
 

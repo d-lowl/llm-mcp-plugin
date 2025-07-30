@@ -3,7 +3,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Literal
 
 from pydantic import BaseModel, Field
 
@@ -30,6 +30,20 @@ class MCPServerConfig(BaseModel):
     timeout: int = Field(30, description="Connection timeout in seconds")
     description: Optional[str] = Field(None, description="Human-readable description")
     
+    # STDERR handling options
+    stderr_mode: Literal["disable", "file", "terminal"] = Field(
+        "disable", 
+        description="How to handle STDERR: 'disable' (default), 'file' (redirect to file), 'terminal' (display in terminal)"
+    )
+    stderr_file: Optional[str] = Field(
+        None, 
+        description="File path to redirect STDERR to (only used when stderr_mode='file')"
+    )
+    stderr_append: bool = Field(
+        False, 
+        description="Whether to append to stderr_file (True) or overwrite it (False)"
+    )
+    
     def validate_config(self) -> None:
         """Validate that required fields are present for the transport type."""
         if self.transport == "stdio":
@@ -38,6 +52,10 @@ class MCPServerConfig(BaseModel):
         elif self.transport in ("http", "sse"):
             if not self.url:
                 raise ValueError("URL is required for http/sse transport")
+        
+        # Validate STDERR configuration
+        if self.stderr_mode == "file" and not self.stderr_file:
+            raise ValueError("stderr_file is required when stderr_mode='file'")
 
 
 class MCPPluginConfig(BaseModel):

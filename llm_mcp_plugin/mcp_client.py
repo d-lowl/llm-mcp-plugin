@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+import os
+import subprocess
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
@@ -50,22 +52,86 @@ class MCPClient:
         else:
             raise ValueError(f"Unsupported transport: {self.config.transport}")
     
+    def _get_stderr_target(self):
+        """Get the appropriate stderr target based on configuration.
+        
+        Returns:
+            subprocess.DEVNULL, subprocess.PIPE, or a file handle
+        """
+        if self.config.stderr_mode == "disable":
+            return subprocess.DEVNULL
+        elif self.config.stderr_mode == "terminal":
+            return None  # Use default (inherit from parent)
+        elif self.config.stderr_mode == "file":
+            if not self.config.stderr_file:
+                logger.warning("stderr_mode is 'file' but no stderr_file specified, disabling STDERR")
+                return subprocess.DEVNULL
+            
+            # Create directory if it doesn't exist
+            stderr_path = os.path.expanduser(self.config.stderr_file)
+            os.makedirs(os.path.dirname(stderr_path), exist_ok=True)
+            
+            # Open file in append or write mode
+            mode = "a" if self.config.stderr_append else "w"
+            try:
+                return open(stderr_path, mode)
+            except OSError as e:
+                logger.error(f"Failed to open stderr file {stderr_path}: {e}")
+                return subprocess.DEVNULL
+        else:
+            logger.warning(f"Unknown stderr_mode: {self.config.stderr_mode}, disabling STDERR")
+            return subprocess.DEVNULL
+    
     @asynccontextmanager
     async def _connect_stdio(self) -> AsyncGenerator[ClientSession, None]:
-        """Connect using stdio transport."""
+        """Connect using stdio transport with custom STDERR handling."""
         if not self.config.command:
             raise ValueError("Command is required for stdio transport")
         
-        server_params = StdioServerParameters(
-            command=self.config.command,
-            args=self.config.args,
-            env=self.config.env
-        )
+        # Get stderr target
+        stderr_target = self._get_stderr_target()
+        stderr_file_handle = None
         
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                yield session
+        try:
+            # If stderr_target is a file handle, we need to keep track of it
+            if hasattr(stderr_target, 'write'):
+                stderr_file_handle = stderr_target
+            
+            # Create custom server parameters
+            server_params = StdioServerParameters(
+                command=self.config.command,
+                args=self.config.args,
+                env=self.config.env
+            )
+            
+            # We need to monkey-patch the stdio_client to use our custom stderr handling
+            # This is done by temporarily modifying the subprocess creation
+            original_create_subprocess_exec = asyncio.create_subprocess_exec
+            
+            async def custom_create_subprocess_exec(*args, **kwargs):
+                # Override stderr in kwargs
+                kwargs['stderr'] = stderr_target
+                return await original_create_subprocess_exec(*args, **kwargs)
+            
+            # Temporarily replace the function
+            asyncio.create_subprocess_exec = custom_create_subprocess_exec
+            
+            try:
+                async with stdio_client(server_params) as (read, write):
+                    async with ClientSession(read, write) as session:
+                        await session.initialize()
+                        yield session
+            finally:
+                # Restore the original function
+                asyncio.create_subprocess_exec = original_create_subprocess_exec
+                
+        finally:
+            # Close the stderr file handle if we opened it
+            if stderr_file_handle and hasattr(stderr_file_handle, 'close'):
+                try:
+                    stderr_file_handle.close()
+                except:
+                    pass
     
     @asynccontextmanager
     async def _connect_sse(self) -> AsyncGenerator[ClientSession, None]:
