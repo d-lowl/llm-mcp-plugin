@@ -23,19 +23,19 @@ uv add git+https://github.com/d-lowl/llm-mcp-plugin.git
 
 ## Development
 
-### Pre-commit Hooks
+### Setup
 
-This project uses pre-commit hooks to ensure code quality. To set up pre-commit:
+To set up the development environment:
 
 ```bash
-# Install pre-commit
-pip install pre-commit
+# Install all dependencies (including linting tools and pre-commit)
+uv sync
 
-# Install the git hook scripts
-pre-commit install
+# Install pre-commit hooks for automatic code quality checks
+uv run pre-commit install
 
-# (Optional) Run against all files
-pre-commit run --all-files
+# (Optional) Run pre-commit against all files
+uv run pre-commit run --all-files
 ```
 
 The pre-commit configuration includes:
