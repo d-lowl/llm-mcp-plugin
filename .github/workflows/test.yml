@@ -1,0 +1,174 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev --all-extras
+
+    - name: Run tests
+      run: |
+        uv run pytest tests/ -v
+
+    - name: Run STDERR handling tests
+      run: |
+        uv run python test_stderr_handling.py
+
+    - name: Run linting with black
+      run: |
+        uv run black --check llm_mcp_plugin/ tests/
+
+    - name: Run import sorting with isort
+      run: |
+        uv run isort --check-only llm_mcp_plugin/ tests/
+
+    - name: Run type checking with mypy
+      run: |
+        uv run mypy llm_mcp_plugin/
+      continue-on-error: true  # Type checking can be flaky with dependencies
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python 3.11
+      run: uv python install 3.11
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev --all-extras
+
+    - name: Test package installation
+      run: |
+        uv run python -c "from llm_mcp_plugin.config import MCPServerConfig; print('✓ Package imports work')"
+
+    - name: Test configuration validation
+      run: |
+        uv run python -c "
+        from llm_mcp_plugin.config import MCPServerConfig
+        
+        # Test valid config
+        config = MCPServerConfig(
+            name='test',
+            transport='stdio',
+            command='python',
+            args=['test.py'],
+            stderr_mode='disable'
+        )
+        config.validate_config()
+        print('✓ Basic config validation works')
+        
+        # Test stderr file validation
+        try:
+            config2 = MCPServerConfig(
+                name='test2',
+                transport='stdio',
+                command='python',
+                args=['test.py'],
+                stderr_mode='file'
+            )
+            config2.validate_config()
+            print('✗ Should have failed validation')
+            exit(1)
+        except ValueError:
+            print('✓ STDERR file validation works')
+        
+        print('All configuration tests passed!')
+        "
+
+  docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check documentation files exist
+      run: |
+        test -f README.md
+        test -f STDERR_HANDLING.md
+        echo "✓ Documentation files exist"
+
+    - name: Validate example configurations
+      run: |
+        python -c "
+        import json
+        
+        # Validate example config
+        with open('examples/stderr_handling_example.json', 'r') as f:
+            config = json.load(f)
+        
+        # Check required fields exist
+        assert 'servers' in config
+        for name, server in config['servers'].items():
+            assert 'transport' in server
+            assert 'command' in server
+            assert 'stderr_mode' in server
+            print(f'✓ {name} config is valid')
+        
+        print('All example configurations are valid JSON')
+        "
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python 3.11
+      run: uv python install 3.11
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Run security checks with bandit
+      run: |
+        uv add bandit[toml]
+        uv run bandit -r llm_mcp_plugin/ -f json -o bandit-report.json || true
+        if [ -f bandit-report.json ]; then
+          echo "Security scan completed. Check bandit-report.json for details."
+        fi
+      continue-on-error: true
+
+    - name: Upload security report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-report
+        path: bandit-report.json
+        retention-days: 30

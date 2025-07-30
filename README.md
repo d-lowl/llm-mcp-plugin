@@ -1,5 +1,8 @@
 # LLM MCP Plugin
 
+[![CI](https://github.com/d-lowl/llm-mcp-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/d-lowl/llm-mcp-plugin/actions/workflows/ci.yml)
+[![Tests](https://github.com/d-lowl/llm-mcp-plugin/actions/workflows/test.yml/badge.svg)](https://github.com/d-lowl/llm-mcp-plugin/actions/workflows/test.yml)
+
 **IMPORTANT: This is a very early version of the MCP wrapper for [llm](https://llm.datasette.io/) and [Bespoken](https://bespoken.ai/), largely written by Claude and barely tested. Proceed with caution.**
 
 A plugin for the [LLM](https://llm.datasette.io/) command-line tool that enables using [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers as toolboxes in conversations.
