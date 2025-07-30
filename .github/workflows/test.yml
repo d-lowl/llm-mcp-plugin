@@ -33,9 +33,9 @@ jobs:
       run: |
         uv run pytest tests/ -v
 
-    - name: Run STDERR handling tests
+    - name: Run STDERR configuration tests
       run: |
-        uv run python test_stderr_handling.py
+        uv run python simple_stderr_test.py
 
     - name: Run linting with black
       run: |

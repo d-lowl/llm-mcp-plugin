@@ -35,7 +35,7 @@ jobs:
       run: uv run pytest tests/ -v --tb=short
 
     - name: Test STDERR handling functionality
-      run: uv run python test_stderr_handling.py
+      run: uv run python simple_stderr_test.py
 
     - name: Lint code
       run: uv run black --check llm_mcp_plugin/ tests/

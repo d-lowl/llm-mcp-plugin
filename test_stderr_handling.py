@@ -57,12 +57,13 @@ async def test_stderr_disable():
         
         # Connect and call a tool
         async with client.connect() as session:
-            tools = await session.list_tools()
+            tools_response = await session.list_tools()
+            tools = tools_response.tools
             print(f"Found {len(tools)} tools")
             
             # Call the test tool
             result = await session.call_tool("test_tool", {})
-            print(f"Tool result: {result.content}")
+            print(f"Tool result: {result}")
         
         print("✓ STDERR disable test completed - no stderr output should be visible")
         
@@ -99,12 +100,13 @@ async def test_stderr_to_file():
         
         # Connect and call a tool
         async with client.connect() as session:
-            tools = await session.list_tools()
+            tools_response = await session.list_tools()
+            tools = tools_response.tools
             print(f"Found {len(tools)} tools")
             
             # Call the test tool
             result = await session.call_tool("test_tool", {})
-            print(f"Tool result: {result.content}")
+            print(f"Tool result: {result}")
         
         # Check if stderr was written to file
         if os.path.exists(stderr_file):
@@ -147,12 +149,13 @@ async def test_stderr_terminal():
         
         # Connect and call a tool
         async with client.connect() as session:
-            tools = await session.list_tools()
+            tools_response = await session.list_tools()
+            tools = tools_response.tools
             print(f"Found {len(tools)} tools")
             
             # Call the test tool
             result = await session.call_tool("test_tool", {})
-            print(f"Tool result: {result.content}")
+            print(f"Tool result: {result}")
         
         print("✓ STDERR terminal test completed - stderr should be visible above")
         
