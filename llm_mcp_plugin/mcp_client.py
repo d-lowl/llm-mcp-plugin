@@ -4,8 +4,9 @@ import asyncio
 import logging
 import os
 import subprocess
+import sys
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union, TextIO
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -52,20 +53,21 @@ class MCPClient:
         else:
             raise ValueError(f"Unsupported transport: {self.config.transport}")
     
-    def _get_stderr_target(self):
+    def _get_stderr_target(self) -> TextIO:
         """Get the appropriate stderr target based on configuration.
         
         Returns:
-            subprocess.DEVNULL, subprocess.PIPE, or a file handle
+            A TextIO object for stderr handling
         """
         if self.config.stderr_mode == "disable":
-            return subprocess.DEVNULL
+            # Return devnull as a TextIO object
+            return open(os.devnull, 'w')
         elif self.config.stderr_mode == "terminal":
-            return None  # Use default (inherit from parent)
+            return sys.stderr  # Use default (inherit from parent)
         elif self.config.stderr_mode == "file":
             if not self.config.stderr_file:
                 logger.warning("stderr_mode is 'file' but no stderr_file specified, disabling STDERR")
-                return subprocess.DEVNULL
+                return open(os.devnull, 'w')
             
             # Create directory if it doesn't exist
             stderr_path = os.path.expanduser(self.config.stderr_file)
@@ -77,10 +79,10 @@ class MCPClient:
                 return open(stderr_path, mode)
             except OSError as e:
                 logger.error(f"Failed to open stderr file {stderr_path}: {e}")
-                return subprocess.DEVNULL
+                return open(os.devnull, 'w')
         else:
             logger.warning(f"Unknown stderr_mode: {self.config.stderr_mode}, disabling STDERR")
-            return subprocess.DEVNULL
+            return open(os.devnull, 'w')
     
     @asynccontextmanager
     async def _connect_stdio(self) -> AsyncGenerator[ClientSession, None]:
@@ -90,46 +92,26 @@ class MCPClient:
         
         # Get stderr target
         stderr_target = self._get_stderr_target()
-        stderr_file_handle = None
         
         try:
-            # If stderr_target is a file handle, we need to keep track of it
-            if hasattr(stderr_target, 'write'):
-                stderr_file_handle = stderr_target
-            
-            # Create custom server parameters
+            # Create server parameters
             server_params = StdioServerParameters(
                 command=self.config.command,
                 args=self.config.args,
                 env=self.config.env
             )
             
-            # We need to monkey-patch the stdio_client to use our custom stderr handling
-            # This is done by temporarily modifying the subprocess creation
-            original_create_subprocess_exec = asyncio.create_subprocess_exec
-            
-            async def custom_create_subprocess_exec(*args, **kwargs):
-                # Override stderr in kwargs
-                kwargs['stderr'] = stderr_target
-                return await original_create_subprocess_exec(*args, **kwargs)
-            
-            # Temporarily replace the function
-            asyncio.create_subprocess_exec = custom_create_subprocess_exec
-            
-            try:
-                async with stdio_client(server_params) as (read, write):
-                    async with ClientSession(read, write) as session:
-                        await session.initialize()
-                        yield session
-            finally:
-                # Restore the original function
-                asyncio.create_subprocess_exec = original_create_subprocess_exec
-                
+            # Use stdio_client with custom errlog parameter
+            async with stdio_client(server_params, errlog=stderr_target) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    yield session
+                    
         finally:
-            # Close the stderr file handle if we opened it
-            if stderr_file_handle and hasattr(stderr_file_handle, 'close'):
+            # Close the stderr file handle if we opened it (but not sys.stderr)
+            if stderr_target != sys.stderr:
                 try:
-                    stderr_file_handle.close()
+                    stderr_target.close()
                 except:
                     pass
     
