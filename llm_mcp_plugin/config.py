@@ -31,12 +31,10 @@ class MCPServerConfig(BaseModel):
 
     # Tool filtering options
     tool_filter_include: Optional[List[str]] = Field(
-        None, 
-        description="List of tool names to include (if specified, only these tools will be exposed)"
+        None, description="List of tool names to include (if specified, only these tools will be exposed)"
     )
     tool_filter_exclude: Optional[List[str]] = Field(
-        None, 
-        description="List of tool names to exclude (these tools will not be exposed)"
+        None, description="List of tool names to exclude (these tools will not be exposed)"
     )
 
     # STDERR handling options
@@ -70,23 +68,21 @@ class MCPServerConfig(BaseModel):
 
     def should_include_tool(self, tool_name: str) -> bool:
         """Check if a tool should be included based on filter configuration.
-        
+
         Args:
             tool_name: Name of the tool to check
-            
+
         Returns:
             True if the tool should be included, False otherwise
         """
         # If include list is specified, tool must be in it
         if self.tool_filter_include is not None:
-            if tool_name not in self.tool_filter_include:
-                return False
-        
+            return tool_name in self.tool_filter_include
+
         # If exclude list is specified, tool must not be in it
         if self.tool_filter_exclude is not None:
-            if tool_name in self.tool_filter_exclude:
-                return False
-        
+            return tool_name not in self.tool_filter_exclude
+
         return True
 
 
