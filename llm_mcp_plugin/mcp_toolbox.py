@@ -104,6 +104,11 @@ class MCPToolbox(llm.Toolbox):
     def _add_tool_methods(self) -> None:
         """Dynamically add tool methods to the toolbox."""
         for tool_name, tool in self._tools.items():
+            # Check if this tool should be included based on filter configuration
+            if not self.config.should_include_tool(tool_name):
+                logger.debug(f"Filtering out tool '{tool_name}' based on server configuration")
+                continue
+
             # Create a method that calls the MCP tool
             def make_tool_method(tool_obj: types.Tool) -> Callable[..., Any]:
                 async def tool_method(**kwargs: Any) -> str:
@@ -241,8 +246,11 @@ class MCPToolbox(llm.Toolbox):
         """
         await self._ensure_initialized()
 
+        # Apply tool filtering to the capabilities list
+        filtered_tools = [tool_name for tool_name in self._tools.keys() if self.config.should_include_tool(tool_name)]
+
         return {
-            "tools": list(self._tools.keys()),
+            "tools": filtered_tools,
             "resources": list(self._resources.keys()),
             "prompts": list(self._prompts.keys()),
         }
@@ -264,6 +272,11 @@ class MCPToolbox(llm.Toolbox):
 
         # Convert MCP tools to LLM tools
         for tool_name, mcp_tool in self._tools.items():
+            # Check if this tool should be included based on filter configuration
+            if not self.config.should_include_tool(tool_name):
+                logger.debug(f"Filtering out tool '{tool_name}' from method_tools based on server configuration")
+                continue
+
             # Get the dynamically created method
             if hasattr(self, tool_name):
                 tool_method = getattr(self, tool_name)

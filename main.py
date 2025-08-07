@@ -144,21 +144,36 @@ llm mcp add toggl \\
   --env TOGGL_API_TOKEN=your_token \\
   --description "Time tracking integration"
 
-# Add a filesystem MCP server
+# Add a filesystem MCP server with tool filtering
 llm mcp add filesystem \\
   --transport stdio \\
   --command python \\
   --args -m \\
   --args mcp.server.filesystem \\
   --args /path/to/allowed/dir \\
-  --description "File operations"
+  --tool-include read_file \\
+  --tool-include write_file \\
+  --tool-exclude delete_file \\
+  --description "File operations (limited tools)"
 
-# Add an HTTP MCP server
+# Add a weather server excluding dangerous tools
 llm mcp add weather \\
   --transport http \\
   --url http://localhost:8000/mcp \\
   --header "Authorization: Bearer token" \\
-  --description "Weather API"
+  --tool-exclude admin_reset \\
+  --tool-exclude clear_cache \\
+  --description "Weather API (safe tools only)"
+
+# Add a server with only specific tools allowed
+llm mcp add safe-tools \\
+  --transport stdio \\
+  --command python \\
+  --args server.py \\
+  --tool-include tool1 \\
+  --tool-include tool2 \\
+  --tool-include tool3 \\
+  --description "Server with only approved tools"
 
 # List all servers
 llm mcp list
@@ -166,7 +181,7 @@ llm mcp list
 # Test a server connection
 llm mcp test toggl
 
-# Get detailed server info
+# Get detailed server info (including tool filters)
 llm mcp info toggl
 
 # Remove a server

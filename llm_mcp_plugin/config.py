@@ -29,6 +29,16 @@ class MCPServerConfig(BaseModel):
     timeout: int = Field(30, description="Connection timeout in seconds")
     description: Optional[str] = Field(None, description="Human-readable description")
 
+    # Tool filtering options
+    tool_filter_include: Optional[List[str]] = Field(
+        description="List of tool names to include (if specified, only these tools will be exposed)",
+        default=None,
+    )
+    tool_filter_exclude: Optional[List[str]] = Field(
+        description="List of tool names to exclude (these tools will not be exposed)",
+        default=None,
+    )
+
     # STDERR handling options
     stderr_mode: Literal["disable", "file", "terminal"] = Field(
         "disable",
@@ -57,6 +67,25 @@ class MCPServerConfig(BaseModel):
         # Validate STDERR configuration
         if self.stderr_mode == "file" and not self.stderr_file:
             raise ValueError("stderr_file is required when stderr_mode='file'")
+
+    def should_include_tool(self, tool_name: str) -> bool:
+        """Check if a tool should be included based on filter configuration.
+
+        Args:
+            tool_name: Name of the tool to check
+
+        Returns:
+            True if the tool should be included, False otherwise
+        """
+        # If include list is specified, tool must be in it
+        if self.tool_filter_include is not None:
+            return tool_name in self.tool_filter_include
+
+        # If exclude list is specified, tool must not be in it
+        if self.tool_filter_exclude is not None:
+            return tool_name not in self.tool_filter_exclude
+
+        return True
 
 
 class MCPPluginConfig(BaseModel):

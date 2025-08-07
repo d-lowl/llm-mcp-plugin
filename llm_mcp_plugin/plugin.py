@@ -98,6 +98,10 @@ def register_commands(cli: click.Group) -> None:
     @click.option("--env", "-e", multiple=True, help="Environment variable (key=value)")
     @click.option("--description", "-d", help="Human-readable description")
     @click.option("--timeout", default=30, help="Connection timeout in seconds")
+    @click.option(
+        "--tool-include", multiple=True, help="Tools to include (if specified, only these tools will be exposed)"
+    )
+    @click.option("--tool-exclude", multiple=True, help="Tools to exclude (these tools will not be exposed)")
     def add(
         name: str,
         transport: str,
@@ -108,6 +112,8 @@ def register_commands(cli: click.Group) -> None:
         env: tuple,
         description: Optional[str],
         timeout: int,
+        tool_include: tuple,
+        tool_exclude: tuple,
     ) -> None:
         """Add a new MCP server configuration."""
 
@@ -127,6 +133,10 @@ def register_commands(cli: click.Group) -> None:
             key, value = e.split("=", 1)
             env_vars[key.strip()] = value.strip()
 
+        # Convert tool filtering options
+        tool_filter_include = list(tool_include) if tool_include else None
+        tool_filter_exclude = list(tool_exclude) if tool_exclude else None
+
         # Create server config
         server_config = MCPServerConfig(
             name=name,
@@ -138,6 +148,8 @@ def register_commands(cli: click.Group) -> None:
             env=env_vars,
             description=description,
             timeout=timeout,
+            tool_filter_include=tool_filter_include,
+            tool_filter_exclude=tool_filter_exclude,
             stderr_mode="disable",
             stderr_file=None,
             stderr_append=False,
@@ -154,6 +166,10 @@ def register_commands(cli: click.Group) -> None:
         config.save_to_file()
 
         click.echo(f"Added MCP server '{name}' with {transport} transport")
+        if tool_filter_include:
+            click.echo(f"  Tool filter (include): {', '.join(tool_filter_include)}")
+        if tool_filter_exclude:
+            click.echo(f"  Tool filter (exclude): {', '.join(tool_filter_exclude)}")
 
     @mcp_group.command()
     @click.argument("name")
@@ -230,6 +246,12 @@ def register_commands(cli: click.Group) -> None:
                     click.echo(f"    {key}: {value}")
 
         click.echo(f"  Timeout: {server_config.timeout}s")
+
+        # Show tool filtering configuration
+        if server_config.tool_filter_include:
+            click.echo(f"  Tool filter (include): {', '.join(server_config.tool_filter_include)}")
+        if server_config.tool_filter_exclude:
+            click.echo(f"  Tool filter (exclude): {', '.join(server_config.tool_filter_exclude)}")
 
         # Test connection and show capabilities
         try:
