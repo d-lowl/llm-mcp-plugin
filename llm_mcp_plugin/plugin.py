@@ -98,7 +98,9 @@ def register_commands(cli: click.Group) -> None:
     @click.option("--env", "-e", multiple=True, help="Environment variable (key=value)")
     @click.option("--description", "-d", help="Human-readable description")
     @click.option("--timeout", default=30, help="Connection timeout in seconds")
-    @click.option("--tool-include", multiple=True, help="Tools to include (if specified, only these tools will be exposed)")
+    @click.option(
+        "--tool-include", multiple=True, help="Tools to include (if specified, only these tools will be exposed)"
+    )
     @click.option("--tool-exclude", multiple=True, help="Tools to exclude (these tools will not be exposed)")
     def add(
         name: str,

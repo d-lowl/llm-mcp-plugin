@@ -247,10 +247,7 @@ class MCPToolbox(llm.Toolbox):
         await self._ensure_initialized()
 
         # Apply tool filtering to the capabilities list
-        filtered_tools = [
-            tool_name for tool_name in self._tools.keys() 
-            if self.config.should_include_tool(tool_name)
-        ]
+        filtered_tools = [tool_name for tool_name in self._tools.keys() if self.config.should_include_tool(tool_name)]
 
         return {
             "tools": filtered_tools,
@@ -279,7 +276,7 @@ class MCPToolbox(llm.Toolbox):
             if not self.config.should_include_tool(tool_name):
                 logger.debug(f"Filtering out tool '{tool_name}' from method_tools based on server configuration")
                 continue
-                
+
             # Get the dynamically created method
             if hasattr(self, tool_name):
                 tool_method = getattr(self, tool_name)

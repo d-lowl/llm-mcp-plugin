@@ -31,10 +31,12 @@ class MCPServerConfig(BaseModel):
 
     # Tool filtering options
     tool_filter_include: Optional[List[str]] = Field(
-        None, description="List of tool names to include (if specified, only these tools will be exposed)"
+        description="List of tool names to include (if specified, only these tools will be exposed)",
+        default=None,
     )
     tool_filter_exclude: Optional[List[str]] = Field(
-        None, description="List of tool names to exclude (these tools will not be exposed)"
+        description="List of tool names to exclude (these tools will not be exposed)",
+        default=None,
     )
 
     # STDERR handling options
