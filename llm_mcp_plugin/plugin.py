@@ -49,6 +49,20 @@ def list_mcp_servers() -> List[str]:
 def clear_mcp_cache() -> None:
     """Clear the MCP toolbox cache."""
     global _mcp_toolboxes
+    # Close any persistent sessions before clearing
+    try:
+        async def _close_all() -> None:
+            for toolbox in list(_mcp_toolboxes.values()):
+                try:
+                    if getattr(toolbox.config, "persistent", False):
+                        await toolbox.client.aclose()
+                except Exception:
+                    pass
+
+        asyncio.run(_close_all())
+    except RuntimeError:
+        # If there's already a running loop (unlikely in CLI), skip closing here
+        pass
     _mcp_toolboxes.clear()
 
 
@@ -102,6 +116,7 @@ def register_commands(cli: click.Group) -> None:
         "--tool-include", multiple=True, help="Tools to include (if specified, only these tools will be exposed)"
     )
     @click.option("--tool-exclude", multiple=True, help="Tools to exclude (these tools will not be exposed)")
+    @click.option("--persistent", "-p", is_flag=True, help="Keep a persistent connection open across tool calls")
     def add(
         name: str,
         transport: str,
@@ -114,6 +129,7 @@ def register_commands(cli: click.Group) -> None:
         timeout: int,
         tool_include: tuple,
         tool_exclude: tuple,
+        persistent: bool,
     ) -> None:
         """Add a new MCP server configuration."""
 
@@ -153,6 +169,7 @@ def register_commands(cli: click.Group) -> None:
             stderr_mode="disable",
             stderr_file=None,
             stderr_append=False,
+            persistent=persistent,
         )
 
         try:
@@ -170,6 +187,8 @@ def register_commands(cli: click.Group) -> None:
             click.echo(f"  Tool filter (include): {', '.join(tool_filter_include)}")
         if tool_filter_exclude:
             click.echo(f"  Tool filter (exclude): {', '.join(tool_filter_exclude)}")
+        if persistent:
+            click.echo("  Persistent: enabled")
 
     @mcp_group.command()
     @click.argument("name")
@@ -182,6 +201,16 @@ def register_commands(cli: click.Group) -> None:
             # Clear from cache
             global _mcp_toolboxes
             if name in _mcp_toolboxes:
+                # Close persistent session if open
+                try:
+                    async def _close_one() -> None:
+                        toolbox = _mcp_toolboxes[name]
+                        if getattr(toolbox.config, "persistent", False):
+                            await toolbox.client.aclose()
+
+                    asyncio.run(_close_one())
+                except RuntimeError:
+                    pass
                 del _mcp_toolboxes[name]
             click.echo(f"Removed MCP server '{name}'")
         else:
