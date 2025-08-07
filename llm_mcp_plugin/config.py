@@ -28,6 +28,7 @@ class MCPServerConfig(BaseModel):
     # General options
     timeout: int = Field(30, description="Connection timeout in seconds")
     description: Optional[str] = Field(None, description="Human-readable description")
+    persistent: bool = Field(False, description="Keep a persistent connection open across tool calls")
 
     # Tool filtering options
     tool_filter_include: Optional[List[str]] = Field(

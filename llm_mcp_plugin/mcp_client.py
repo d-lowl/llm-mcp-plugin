@@ -30,6 +30,16 @@ class MCPClient:
         self._tools_cache: Optional[List[types.Tool]] = None
         self._resources_cache: Optional[List[types.Resource]] = None
         self._prompts_cache: Optional[List[types.Prompt]] = None
+        # Persistent connection internals
+        self._transport_cm: Optional[Any] = None
+        self._session_cm: Optional[Any] = None
+        self._stderr_target: Optional[TextIO] = None
+        try:
+            import asyncio
+
+            self._connect_lock = asyncio.Lock()
+        except Exception:
+            self._connect_lock = None  # Fallback for environments without asyncio loop yet
 
     @asynccontextmanager
     async def connect(self) -> AsyncGenerator[ClientSession, None]:
@@ -38,6 +48,13 @@ class MCPClient:
         Yields:
             ClientSession connected to the MCP server
         """
+        # Reuse persistent session if configured
+        if getattr(self.config, "persistent", False):
+            await self._ensure_persistent_session()
+            assert self._session is not None
+            yield self._session
+            return
+
         if self.config.transport == "stdio":
             async with self._connect_stdio() as session:
                 yield session
@@ -92,8 +109,18 @@ class MCPClient:
 
         try:
             # Create server parameters
+            # Resolve python command to current interpreter for portability
+            command_to_use = self.config.command
+            try:
+                import shutil
+
+                if command_to_use in ("python", "python3") and shutil.which(command_to_use) is None:
+                    command_to_use = sys.executable
+            except Exception:
+                pass
+
             server_params = StdioServerParameters(
-                command=self.config.command, args=self.config.args, env=self.config.env
+                command=command_to_use, args=self.config.args, env=self.config.env
             )
 
             # Use stdio_client with custom errlog parameter
@@ -137,6 +164,100 @@ class MCPClient:
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 yield session
+
+    async def _ensure_persistent_session(self) -> None:
+        """Ensure a persistent session is established and ready to use."""
+        if self._session is not None:
+            return
+        lock = getattr(self, "_connect_lock", None)
+        if lock is not None:
+            async with lock:
+                if self._session is not None:
+                    return
+                await self._open_persistent()
+        else:
+            # Fallback without lock
+            await self._open_persistent()
+
+    async def _open_persistent(self) -> None:
+        """Open the persistent transport and session, storing context managers for later close."""
+        # Prepare stderr for stdio early so it stays open
+        stderr_target = None
+        if self.config.transport == "stdio":
+            stderr_target = self._get_stderr_target()
+        self._stderr_target = stderr_target
+
+        if self.config.transport == "stdio":
+            if not self.config.command:
+                raise ValueError("Command is required for stdio transport")
+            # Resolve python command to current interpreter for portability
+            command_to_use = self.config.command
+            try:
+                import shutil
+                if command_to_use in ("python", "python3") and shutil.which(command_to_use) is None:
+                    command_to_use = sys.executable
+            except Exception:
+                pass
+            server_params = StdioServerParameters(
+                command=command_to_use, args=self.config.args, env=self.config.env
+            )
+            transport_cm = stdio_client(server_params, errlog=stderr_target)
+            read, write = await transport_cm.__aenter__()
+        elif self.config.transport == "sse":
+            if not self.config.url:
+                raise ValueError("URL is required for SSE transport")
+            transport_cm = sse_client(self.config.url, headers=self.config.headers)
+            read, write = await transport_cm.__aenter__()
+        elif self.config.transport == "http":
+            if not self.config.url:
+                raise ValueError("URL is required for HTTP transport")
+            transport_cm = streamablehttp_client(self.config.url, headers=self.config.headers)
+            read, write, _ = await transport_cm.__aenter__()
+        else:
+            raise ValueError(f"Unsupported transport: {self.config.transport}")
+
+        session_cm = ClientSession(read, write)
+        session = await session_cm.__aenter__()
+        await session.initialize()
+
+        self._transport_cm = transport_cm
+        self._session_cm = session_cm
+        self._session = session
+        logger.info("Established persistent MCP session")
+
+    async def aclose(self) -> None:
+        """Close any persistent session and transport, if open."""
+        lock = getattr(self, "_connect_lock", None)
+        if lock is not None:
+            async with lock:
+                await self._close_persistent_locked()
+        else:
+            await self._close_persistent_locked()
+
+    async def _close_persistent_locked(self) -> None:
+        session_cm = self._session_cm
+        transport_cm = self._transport_cm
+        stderr_target = self._stderr_target
+
+        self._session_cm = None
+        self._transport_cm = None
+        self._stderr_target = None
+        self._session = None
+
+        try:
+            if session_cm is not None:
+                await session_cm.__aexit__(None, None, None)
+        finally:
+            if transport_cm is not None:
+                try:
+                    await transport_cm.__aexit__(None, None, None)
+                finally:
+                    if stderr_target is not None and stderr_target is not sys.stderr:
+                        try:
+                            stderr_target.close()
+                        except Exception:
+                            pass
+        logger.info("Closed persistent MCP session")
 
     async def get_tools(self, force_refresh: bool = False) -> List[types.Tool]:
         """Get available tools from the MCP server.
